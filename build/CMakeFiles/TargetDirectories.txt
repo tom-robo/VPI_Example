@@ -1,0 +1,3 @@
+/Garford/VPI_Example/build/CMakeFiles/rebuild_cache.dir
+/Garford/VPI_Example/build/CMakeFiles/edit_cache.dir
+/Garford/VPI_Example/build/CMakeFiles/VPI_Example.dir
