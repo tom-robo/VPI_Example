@@ -1,1 +1,0 @@
-/usr/bin/c++ CMakeFiles/VPI_Example.dir/VPI_Example.cpp.o -o VPI_Example   -L/opt/nvidia/vpi2/lib64  -Wl,-rpath,/opt/nvidia/vpi2/lib64 -lnvvpi -lopencv_core -lopencv_imgproc -lopencv_imgcodecs 
