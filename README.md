@@ -13,7 +13,7 @@ In repository root:
  - mkdir build && cd build 
  - cmake .. 
  - make -j6
- ./VPI_Example 
+ - ./VPI_Example 
  
  ## Explanation
  The example iterates through the 20 test images seen in the repository root. For each image a gaussian image pyramid is generated and keypoints are computed using vpiSubmitHarrisCornerDetector and stored in the prevFeatures buffer. 
