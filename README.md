@@ -4,8 +4,8 @@ An example to demonstrate differences in number of points tracked by either reus
 Follow along in the forum exchange: https://forums.developer.nvidia.com/t/vpi-unable-to-write-to-vpi-array-type-u8-on-jetson-device/242282
 
 ## Dependencies:
--the VPI v2.1 (or greater) library with header files (install nvidia-vpi2-dev on jetson with apt I think or vpi2-dev on x86-64). 
--Also required are opencv-core, opencv-imgproc and opencv-imgcodecs for image loading.
+- the VPI v2.1 (or greater) library with header files (install nvidia-vpi2-dev on jetson with apt I think or vpi2-dev on x86-64). 
+- Also required are opencv-core, opencv-imgproc and opencv-imgcodecs for image loading.
 
 ## To build: 
 
