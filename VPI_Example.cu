@@ -3,6 +3,8 @@
 #include <sstream>
 #include <iomanip>
 
+#include <cuda_runtime.h> 
+
 #include <vpi/VPI.h>
 #include <vpi/algo/OpticalFlowPyrLK.h>
 #include <vpi/algo/GaussianPyramid.h>
@@ -88,8 +90,23 @@ public:
 
     void createStatusArray()
     {
-        CHECK_VPI(vpiArrayCreate(maxCorners, VPI_ARRAY_TYPE_U8, 0, &featStatus));
+        // CHECK_VPI(vpiArrayCreate(maxCorners, VPI_ARRAY_TYPE_U8, 0, &featStatus));
+        
+        cudaMalloc(&statusPtr, maxCorners); 
+        featStatusData.bufferType = VPI_ARRAY_BUFFER_CUDA_AOS;
+        // *featStatusData.buffer.aos.sizePointer = maxCorners; 
+        featStatusData.buffer.aos.capacity = maxCorners; 
+        featStatusData.buffer.aos.strideBytes = maxCorners; 
+
+        featStatusData.buffer.aos.data = (void*)statusPtr; 
+        featStatusData.buffer.aos.type = VPI_ARRAY_TYPE_U8;
+
+        CHECK_VPI(vpiArrayCreateWrapper(&featStatusData, VPI_BACKEND_CUDA, &featStatus)); 
+        // CHECK_VPI(vpiArrayCreate(maxCorners, VPI_ARRAY_TYPE_U8, 0, &featStatus));
+    
+    
     }
+
 
     void destroyStatusArray()
     {
@@ -98,6 +115,8 @@ public:
             vpiArrayDestroy(featStatus);
             featStatus = NULL; 
         }
+
+        cudaFree(statusPtr);
     }
 
     void makeCurrGaussPyramid()
@@ -335,6 +354,8 @@ private:
 
     VPIBackend backend = VPI_BACKEND_CUDA; 
     VPIImageFormat format = VPI_IMAGE_FORMAT_U8;
+
+    unsigned char* statusPtr; 
 
     VPIPyramid pyrPrevFrame=NULL;
     VPIPyramid pyrCurFrame=NULL; 
