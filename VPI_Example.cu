@@ -27,10 +27,26 @@ inline void checkVPIError(VPIStatus stmt, const char *file, int line)
         char buffer[VPI_MAX_STATUS_MESSAGE_LENGTH];         
         vpiGetLastStatusMessage(buffer, sizeof(buffer));    
         std::ostringstream ss;                              
-        ss << vpiStatusGetName(status__) << ": " << buffer << " file: " << file << ":" << line << "\n"; 
+        ss << vpiStatusGetName(status__) << ": " << buffer 
+                << " file: " << file << ":" << line << "\n"; 
         throw std::runtime_error(ss.str());                 
     }                                                       
 }
+
+inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
+{
+    if (code != cudaSuccess)
+    {
+        std::stringstream err; 
+        err << "ERROR: GPUassert: " << cudaGetErrorString(code) 
+                << " " << file << ":" << line << std::endl;
+        throw std::runtime_error(err.str());
+    }
+}
+
+#define gpuErrchk(ans) { \
+            gpuAssert((ans), __FILE__, __LINE__); \
+        }
 
 #define CHECK_VPI(STMT) do  {  \
         STMT; \
@@ -92,19 +108,18 @@ public:
     {
         // CHECK_VPI(vpiArrayCreate(maxCorners, VPI_ARRAY_TYPE_U8, 0, &featStatus));
         
-        cudaMalloc(&statusPtr, maxCorners); 
         featStatusData.bufferType = VPI_ARRAY_BUFFER_CUDA_AOS;
-        // *featStatusData.buffer.aos.sizePointer = maxCorners; 
+        featStatusData.buffer.aos.sizePointer = &numStatusPoints; 
         featStatusData.buffer.aos.capacity = maxCorners; 
         featStatusData.buffer.aos.strideBytes = maxCorners; 
 
-        featStatusData.buffer.aos.data = (void*)statusPtr; 
+        gpuErrchk(cudaMalloc(&featStatusData.buffer.aos.data, maxCorners)); 
+
         featStatusData.buffer.aos.type = VPI_ARRAY_TYPE_U8;
 
         CHECK_VPI(vpiArrayCreateWrapper(&featStatusData, VPI_BACKEND_CUDA, &featStatus)); 
-        // CHECK_VPI(vpiArrayCreate(maxCorners, VPI_ARRAY_TYPE_U8, 0, &featStatus));
-    
-    
+        
+        std::cout << "Created array wrapper" << std::endl;;
     }
 
 
@@ -116,7 +131,7 @@ public:
             featStatus = NULL; 
         }
 
-        cudaFree(statusPtr);
+        gpuErrchk(cudaFree(featStatusData.buffer.aos.data));
     }
 
     void makeCurrGaussPyramid()
@@ -189,6 +204,7 @@ public:
         else
         { 
             first = false; 
+            return 0; 
         }
 
         computePointsToTrack();
@@ -291,6 +307,9 @@ private:
             }
         }
 
+/// Setting statusPtr to zero via cudaMemset; 
+        gpuErrchk(cudaMemset(statusPtr, 0, maxCorners)); 
+
         CHECK_VPI(vpiArrayUnlock(currFeatures));
         CHECK_VPI(vpiArrayUnlock(prevFeatures));
         CHECK_VPI(vpiArrayUnlock(featStatus));
@@ -317,6 +336,9 @@ private:
         VPIArrayData prevPointsBuff; 
         CHECK_VPI(vpiArrayLockData(prevFeatures, VPI_LOCK_READ, VPI_ARRAY_BUFFER_HOST_AOS, &prevPointsBuff));
         numFeatures2Track = *prevPointsBuff.buffer.aos.sizePointer;
+        
+        numStatusPoints = numFeatures2Track; 
+
         CHECK_VPI(vpiArrayUnlock(prevFeatures));
 //        std::cout << " Number of detected Points: " << numFeatures2Track << std::endl;
 
@@ -332,8 +354,8 @@ private:
 
     bool first = true; 
 
-    int numFeatures2Track=0;
-    int numTrackedPoints=0;
+    int32_t numFeatures2Track=0;
+    int32_t numTrackedPoints=0;
 
     std::vector<cv::Point2f> prevTrackedPoints; 
     std::vector<cv::Point2f> currTrackedPoints; 
@@ -356,6 +378,7 @@ private:
     VPIImageFormat format = VPI_IMAGE_FORMAT_U8;
 
     unsigned char* statusPtr; 
+    int32_t numStatusPoints=0;
 
     VPIPyramid pyrPrevFrame=NULL;
     VPIPyramid pyrCurFrame=NULL; 
@@ -365,6 +388,7 @@ private:
     VPIArray scores=NULL;
 
     VPIArray featStatus=NULL;
+    VPIArrayData featStatusData; 
 
     VPIOpticalFlowPyrLKParams lkParams;
     VPIPayload optflow=NULL;
@@ -388,8 +412,15 @@ void reuseStatusArray(bool zeroStatusBuffer, int width, int height, float scale,
         std::stringstream filename; 
         filename << "./../dashcam-" << std::setw(3) << std::setfill('0') << i << ".jpg"; 
 
-        track.setInputImage(filename.str()); 
+        std::cout << " Into tracking loop"; 
+
+        track.setInputImage(filename.str());
+
+        std::cout << " Set input image"; 
+
         int numPointsTracked = track.trackPoints(zeroStatusBuffer);
+
+        std::cout << " Tracked points"; 
 
         std::cout << i << ": Point in prev array: " << track.getNumFeatures2Track() << " number of points tracked: " << track.getNumTrackedPoints() << std::endl; 
     }

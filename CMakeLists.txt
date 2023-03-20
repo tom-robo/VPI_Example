@@ -27,3 +27,11 @@ target_link_libraries(${PROJECT_NAME}
     PUBLIC opencv_imgproc
     PUBLIC opencv_imgcodecs
 )
+
+
+# set_target_properties(${PROJECT_NAME} PROPERTIES
+#     VERSION ${PROJECT_VERSION}
+#     CMAKE_CXX_STANDARD 11
+#     CMAKE_CUDA_STANDARD 11
+#     CMAKE_CUDA_STANDARD_REQUIRED TRUE
+#     CMAKE_CXX_STANDARD_REQUIRED TRUE)
